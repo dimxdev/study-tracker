@@ -1,26 +1,136 @@
 @import "tailwindcss";
 
+/*
+  Palet warna "Crawl" sesuai design.md.
+  Semantic tokens memakai CSS variables supaya dark mode gampang ditambah nanti
+  tanpa hardcode hex di tiap komponen.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --cyan-bg: #e0fbfc;
+  --turquoise: #64dfdf;
+  --coral: #ff9f80;
+  --sunny: #ffd972;
+  --mint: #8fe3b8;
+  --navy: #1b2a3a;
+
+  --background: var(--cyan-bg);
+  --surface: #ffffff;
+  --foreground: var(--navy);
+  --muted: #5b7080;
+  --border: #cdeef0;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-cyan-bg: var(--cyan-bg);
+  --color-turquoise: var(--turquoise);
+  --color-coral: var(--coral);
+  --color-sunny: var(--sunny);
+  --color-mint: var(--mint);
+  --color-navy: var(--navy);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+
+  --font-sans: var(--font-poppins), system-ui, sans-serif;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
 }
 
 body {
-  background: var(--background);
+  /* Background berwarna & lembut supaya efek glass/blur kelihatan */
+  background:
+    radial-gradient(
+      1100px 600px at 8% -5%,
+      color-mix(in srgb, var(--turquoise) 55%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      1000px 560px at 100% 5%,
+      color-mix(in srgb, var(--coral) 45%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      900px 520px at 45% 108%,
+      color-mix(in srgb, var(--mint) 55%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      800px 500px at 85% 100%,
+      color-mix(in srgb, var(--sunny) 40%, transparent),
+      transparent 55%
+    ),
+    var(--cyan-bg);
+  background-attachment: fixed;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-poppins), system-ui, sans-serif;
+}
+
+/*
+  Glassmorphism ala Apple: panel frosted semi-transparan + blur.
+  Dipakai lewat class utility supaya konsisten di semua komponen.
+*/
+.glass {
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 8px 30px -10px rgba(27, 42, 58, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* Varian lebih transparan untuk elemen sekunder (empty state, dsb.) */
+.glass-soft {
+  background: color-mix(in srgb, var(--surface) 38%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Elemen interaktif di atas glass (input, tile dalam) */
+.glass-inset {
+  background: color-mix(in srgb, var(--surface) 45%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* Fallback kalau browser tak dukung backdrop-filter */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass,
+  .glass-soft,
+  .glass-inset {
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+  }
+}
+
+/* Confetti burst saat item ditandai Done */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(105vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* Progress bar mengisi halus */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out both;
 }

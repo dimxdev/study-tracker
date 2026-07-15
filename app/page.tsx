@@ -1,65 +1,206 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import type { Filters, Status, TrackItem } from "@/types";
+import { useTracker, type NewItemInput } from "@/hooks/useTracker";
+import { getRandomQuote } from "@/lib/quotes";
+import Header from "@/components/Header";
+import Modal from "@/components/Modal";
+import ItemForm from "@/components/ItemForm";
+import Button from "@/components/Button";
+import Confetti from "@/components/Confetti";
+import SideNav, { type ViewKey } from "@/components/SideNav";
+import HomeView from "@/components/views/HomeView";
+import HistoryView from "@/components/views/HistoryView";
+import AnalyticsView from "@/components/views/AnalyticsView";
+import CategoriesView from "@/components/views/CategoriesView";
+
+const DEFAULT_FILTERS: Filters = {
+  search: "",
+  status: "all",
+  category: "all",
+  priority: "all",
+  sort: "newest",
+};
+
+const VIEW_TITLES: Record<ViewKey, string> = {
+  home: "Beranda",
+  categories: "Kelola Kategori",
+  analytics: "Analitik",
+  history: "Riwayat Selesai",
+};
 
 export default function Home() {
+  const {
+    state,
+    hydrated,
+    addItem,
+    updateItem,
+    deleteItem,
+    setStatus,
+    addCategory,
+    renameCategory,
+    deleteCategory,
+  } = useTracker();
+
+  const [view, setView] = useState<ViewKey>("home");
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<TrackItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TrackItem | null>(null);
+  const [confettiKey, setConfettiKey] = useState(0);
+  const [quote, setQuote] = useState("");
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- random quote client-only, mencegah hydration mismatch
+    setQuote(getRandomQuote());
+  }, []);
+
+  const doneCount = state.items.filter((i) => i.status === "done").length;
+
+  function patchFilters(patch: Partial<Filters>) {
+    setFilters((prev) => ({ ...prev, ...patch }));
+  }
+
+  function openAdd() {
+    setEditing(null);
+    setFormOpen(true);
+  }
+
+  function openEdit(item: TrackItem) {
+    setEditing(item);
+    setFormOpen(true);
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    setEditing(null);
+  }
+
+  function fireConfetti() {
+    setConfettiKey((k) => k + 1);
+  }
+
+  function handleSubmit(input: NewItemInput) {
+    if (editing) {
+      const wasDone = editing.status === "done";
+      updateItem(editing.id, input);
+      if (!wasDone && input.status === "done") fireConfetti();
+    } else {
+      addItem(input);
+      if (input.status === "done") fireConfetti();
+    }
+    closeForm();
+  }
+
+  function handleStatusChange(id: string, status: Status) {
+    const item = state.items.find((i) => i.id === id);
+    setStatus(id, status);
+    if (item && item.status !== "done" && status === "done") fireConfetti();
+  }
+
+  function confirmDelete() {
+    if (deleteTarget) deleteItem(deleteTarget.id);
+    setDeleteTarget(null);
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-full">
+      <SideNav active={view} onChange={setView} historyCount={doneCount} />
+
+      <div className="md:pl-60">
+        <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 pb-24 pt-6 sm:px-6 md:pb-10 md:pt-8">
+          <Header streak={state.currentStreak} quote={quote} />
+
+          {!hydrated ? (
+            <div className="py-20 text-center text-muted">Memuat data… 🐢</div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg font-bold text-navy">
+                  {VIEW_TITLES[view]}
+                </h2>
+                {view === "home" && (
+                  <Button onClick={openAdd} size="sm">
+                    ➕ Tambah
+                  </Button>
+                )}
+              </div>
+
+              {view === "home" && (
+                <HomeView
+                  items={state.items}
+                  filters={filters}
+                  categories={state.categories}
+                  onFilterChange={patchFilters}
+                  onAdd={openAdd}
+                  onStatusChange={handleStatusChange}
+                  onEdit={openEdit}
+                  onDelete={setDeleteTarget}
+                />
+              )}
+
+              {view === "categories" && (
+                <CategoriesView
+                  categories={state.categories}
+                  items={state.items}
+                  onAdd={addCategory}
+                  onRename={renameCategory}
+                  onDelete={deleteCategory}
+                />
+              )}
+
+              {view === "analytics" && <AnalyticsView items={state.items} />}
+
+              {view === "history" && (
+                <HistoryView
+                  items={state.items}
+                  onStatusChange={handleStatusChange}
+                  onEdit={openEdit}
+                  onDelete={setDeleteTarget}
+                />
+              )}
+            </>
+          )}
+        </main>
+      </div>
+
+      {/* Form tambah/edit */}
+      <Modal
+        open={formOpen}
+        onClose={closeForm}
+        title={editing ? "Edit Item" : "Tambah Item Baru"}
+      >
+        <ItemForm
+          initial={editing}
+          categories={state.categories}
+          onSubmit={handleSubmit}
+          onCancel={closeForm}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+      </Modal>
+
+      {/* Konfirmasi hapus item */}
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="Hapus item?"
+      >
+        <p className="text-sm text-muted">
+          Yakin mau menghapus{" "}
+          <span className="font-semibold text-navy">{deleteTarget?.title}</span>?
+          Tindakan ini nggak bisa dibatalkan.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
+            Batal
+          </Button>
+          <Button variant="danger" onClick={confirmDelete}>
+            🗑️ Hapus
+          </Button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </Modal>
+
+      {confettiKey > 0 && <Confetti key={confettiKey} />}
     </div>
   );
 }
