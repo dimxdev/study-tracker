@@ -1,5 +1,34 @@
-import type { AppState } from "@/types";
+import type { AppState, Resource, TrackItem } from "@/types";
 import { DEFAULT_CATEGORIES, STORAGE_KEY } from "./constants";
+
+/**
+ * Normalisasi item saat dibaca dari storage, termasuk migrasi format lama:
+ * dulu resource cuma satu string (`resourceLink`), sekarang array `resources`.
+ */
+function normalizeItem(raw: unknown): TrackItem {
+  const it = raw as TrackItem & { resourceLink?: string };
+  let resources: Resource[] | undefined;
+
+  if (Array.isArray(it.resources)) {
+    resources = it.resources
+      .filter((r): r is Resource => !!r && typeof r.url === "string")
+      .map((r) => ({ url: r.url, label: r.label }));
+  } else if (typeof it.resourceLink === "string" && it.resourceLink.trim()) {
+    resources = [{ url: it.resourceLink }];
+  }
+
+  return {
+    id: it.id,
+    title: it.title,
+    description: it.description,
+    resources,
+    category: it.category,
+    priority: it.priority,
+    status: it.status,
+    createdAt: it.createdAt,
+    completedAt: it.completedAt,
+  };
+}
 
 export const EMPTY_STATE: AppState = {
   items: [],
@@ -18,7 +47,7 @@ export function loadState(): AppState {
 
     const parsed = JSON.parse(raw) as Partial<AppState>;
     return {
-      items: Array.isArray(parsed.items) ? parsed.items : [],
+      items: Array.isArray(parsed.items) ? parsed.items.map(normalizeItem) : [],
       categories:
         Array.isArray(parsed.categories) && parsed.categories.length > 0
           ? parsed.categories

@@ -9,6 +9,7 @@ import Modal from "@/components/Modal";
 import ItemForm from "@/components/ItemForm";
 import Button from "@/components/Button";
 import Confetti from "@/components/Confetti";
+import ItemDetailModal from "@/components/ItemDetailModal";
 import SideNav, { type ViewKey } from "@/components/SideNav";
 import HomeView from "@/components/views/HomeView";
 import HistoryView from "@/components/views/HistoryView";
@@ -21,13 +22,6 @@ const DEFAULT_FILTERS: Filters = {
   category: "all",
   priority: "all",
   sort: "newest",
-};
-
-const VIEW_TITLES: Record<ViewKey, string> = {
-  home: "Beranda",
-  categories: "Kelola Kategori",
-  analytics: "Analitik",
-  history: "Riwayat Selesai",
 };
 
 export default function Home() {
@@ -48,8 +42,15 @@ export default function Home() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<TrackItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TrackItem | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [confettiKey, setConfettiKey] = useState(0);
   const [quote, setQuote] = useState("");
+
+  // Resolve item detail dari state supaya isinya selalu live (mis. saat status
+  // diubah dari dalam modal, atau item terhapus).
+  const detailItem = detailId
+    ? state.items.find((i) => i.id === detailId) ?? null
+    : null;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- random quote client-only, mencegah hydration mismatch
@@ -75,6 +76,21 @@ export default function Home() {
   function closeForm() {
     setFormOpen(false);
     setEditing(null);
+  }
+
+  function openDetail(item: TrackItem) {
+    setDetailId(item.id);
+  }
+
+  // Dari modal detail: tutup detail dulu, lalu buka form / konfirmasi hapus
+  function editFromDetail(item: TrackItem) {
+    setDetailId(null);
+    openEdit(item);
+  }
+
+  function deleteFromDetail(item: TrackItem) {
+    setDetailId(null);
+    setDeleteTarget(item);
   }
 
   function fireConfetti() {
@@ -116,17 +132,6 @@ export default function Home() {
             <div className="py-20 text-center text-muted">Memuat data… 🐢</div>
           ) : (
             <>
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-bold text-navy">
-                  {VIEW_TITLES[view]}
-                </h2>
-                {view === "home" && (
-                  <Button onClick={openAdd} size="sm">
-                    ➕ Tambah
-                  </Button>
-                )}
-              </div>
-
               {view === "home" && (
                 <HomeView
                   items={state.items}
@@ -137,6 +142,7 @@ export default function Home() {
                   onStatusChange={handleStatusChange}
                   onEdit={openEdit}
                   onDelete={setDeleteTarget}
+                  onOpenDetail={openDetail}
                 />
               )}
 
@@ -158,6 +164,7 @@ export default function Home() {
                   onStatusChange={handleStatusChange}
                   onEdit={openEdit}
                   onDelete={setDeleteTarget}
+                  onOpenDetail={openDetail}
                 />
               )}
             </>
@@ -199,6 +206,15 @@ export default function Home() {
           </Button>
         </div>
       </Modal>
+
+      {/* Detail item */}
+      <ItemDetailModal
+        item={detailItem}
+        onClose={() => setDetailId(null)}
+        onEdit={editFromDetail}
+        onDelete={deleteFromDetail}
+        onStatusChange={handleStatusChange}
+      />
 
       {confettiKey > 0 && <Confetti key={confettiKey} />}
     </div>

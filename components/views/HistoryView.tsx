@@ -1,14 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AnimatePresence } from "motion/react";
 import type { Status, TrackItem } from "@/types";
 import ItemCard from "@/components/ItemCard";
+import AnimatedItem from "@/components/AnimatedItem";
 
 interface HistoryViewProps {
   items: TrackItem[];
   onStatusChange: (id: string, status: Status) => void;
   onEdit: (item: TrackItem) => void;
   onDelete: (item: TrackItem) => void;
+  onOpenDetail: (item: TrackItem) => void;
 }
 
 function formatDate(iso?: string): string {
@@ -25,6 +28,7 @@ export default function HistoryView({
   onStatusChange,
   onEdit,
   onDelete,
+  onOpenDetail,
 }: HistoryViewProps) {
   const [search, setSearch] = useState("");
 
@@ -84,21 +88,26 @@ export default function HistoryView({
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {doneItems.map((item) => (
-            <div key={item.id} className="flex flex-col gap-1">
-              <ItemCard
-                item={item}
-                onStatusChange={onStatusChange}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
-              {item.completedAt && (
-                <span className="px-1 text-[11px] font-medium text-muted">
-                  Selesai {formatDate(item.completedAt)}
-                </span>
-              )}
-            </div>
-          ))}
+          <AnimatePresence mode="popLayout" initial={false}>
+            {doneItems.map((item) => (
+              <AnimatedItem key={item.id}>
+                <div className="flex h-full flex-col gap-1">
+                  <ItemCard
+                    item={item}
+                    onStatusChange={onStatusChange}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onOpenDetail={onOpenDetail}
+                  />
+                  {item.completedAt && (
+                    <span className="px-1 text-[11px] font-medium text-muted">
+                      Selesai {formatDate(item.completedAt)}
+                    </span>
+                  )}
+                </div>
+              </AnimatedItem>
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </div>

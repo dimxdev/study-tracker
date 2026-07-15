@@ -21,23 +21,29 @@ export function applyFilters(
     return true;
   });
 
-  const sorted = [...filtered];
-  switch (filters.sort) {
-    case "priority":
-      sorted.sort(
-        (a, b) => PRIORITY_META[b.priority].rank - PRIORITY_META[a.priority].rank
-      );
-      break;
-    case "alpha":
-      sorted.sort((a, b) => a.title.localeCompare(b.title, "id"));
-      break;
-    case "newest":
-    default:
-      sorted.sort(
-        (a, b) =>
+  const bySort = (a: TrackItem, b: TrackItem): number => {
+    switch (filters.sort) {
+      case "priority":
+        return (
+          PRIORITY_META[b.priority].rank - PRIORITY_META[a.priority].rank
+        );
+      case "alpha":
+        return a.title.localeCompare(b.title, "id");
+      case "newest":
+      default:
+        return (
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      break;
-  }
+        );
+    }
+  };
+
+  // Item "In Progress" selalu dipin ke atas (apa pun sort-nya),
+  // supaya yang lagi aktif dikerjain langsung kelihatan di nomor 1.
+  const sorted = [...filtered].sort((a, b) => {
+    const aActive = a.status === "in-progress" ? 0 : 1;
+    const bActive = b.status === "in-progress" ? 0 : 1;
+    if (aActive !== bActive) return aActive - bActive;
+    return bySort(a, b);
+  });
   return sorted;
 }

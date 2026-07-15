@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import type { TrackItem } from "@/types";
+import { titleCase } from "@/lib/format";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
 import Select from "@/components/Select";
@@ -39,7 +40,7 @@ export default function CategoriesView({
 
   function handleAdd(e: FormEvent) {
     e.preventDefault();
-    const clean = newName.trim();
+    const clean = titleCase(newName);
     if (!clean) {
       setError("Nama kategori nggak boleh kosong.");
       return;
@@ -60,8 +61,9 @@ export default function CategoriesView({
 
   function submitRename(e: FormEvent) {
     e.preventDefault();
-    if (renaming && renameValue.trim()) {
-      onRename(renaming, renameValue.trim());
+    const formatted = titleCase(renameValue);
+    if (renaming && formatted) {
+      onRename(renaming, formatted);
     }
     setRenaming(null);
   }

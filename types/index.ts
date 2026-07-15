@@ -1,11 +1,16 @@
 export type Priority = "low" | "medium" | "high";
 export type Status = "to-learn" | "in-progress" | "done";
 
+export interface Resource {
+  url: string;
+  label?: string; // keterangan singkat, mis. "Dokumentasi resmi", "Video tutorial"
+}
+
 export interface TrackItem {
   id: string;
   title: string;
   description?: string;
-  resourceLink?: string;
+  resources?: Resource[]; // bisa lebih dari satu link, tiap link punya keterangan
   category: string;
   priority: Priority;
   status: Status;

@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
+import { AnimatePresence } from "motion/react";
 import type { Filters, Status, TrackItem } from "@/types";
 import { applyFilters } from "@/lib/filter";
 import Toolbar from "@/components/Toolbar";
 import ItemCard from "@/components/ItemCard";
+import AnimatedItem from "@/components/AnimatedItem";
 import EmptyState from "@/components/EmptyState";
 
 const ACTIVE_STATUSES: Status[] = ["to-learn", "in-progress"];
@@ -18,6 +20,7 @@ interface HomeViewProps {
   onStatusChange: (id: string, status: Status) => void;
   onEdit: (item: TrackItem) => void;
   onDelete: (item: TrackItem) => void;
+  onOpenDetail: (item: TrackItem) => void;
 }
 
 export default function HomeView({
@@ -29,6 +32,7 @@ export default function HomeView({
   onStatusChange,
   onEdit,
   onDelete,
+  onOpenDetail,
 }: HomeViewProps) {
   const activeItems = useMemo(
     () => items.filter((it) => it.status !== "done"),
@@ -60,15 +64,19 @@ export default function HomeView({
         <EmptyState filtered={activeItems.length > 0 && isFiltering} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {visible.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              onStatusChange={onStatusChange}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          ))}
+          <AnimatePresence mode="popLayout" initial={false}>
+            {visible.map((item) => (
+              <AnimatedItem key={item.id}>
+                <ItemCard
+                  item={item}
+                  onStatusChange={onStatusChange}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onOpenDetail={onOpenDetail}
+                />
+              </AnimatedItem>
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </div>

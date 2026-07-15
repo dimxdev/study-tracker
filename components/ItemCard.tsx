@@ -1,6 +1,6 @@
 "use client";
 
-import type { Status, TrackItem } from "@/types";
+import type { Priority, Status, TrackItem } from "@/types";
 import { PRIORITY_META, STATUS_META, STATUS_ORDER } from "@/lib/constants";
 import Badge from "./Badge";
 
@@ -9,6 +9,25 @@ interface ItemCardProps {
   onStatusChange: (id: string, status: Status) => void;
   onEdit: (item: TrackItem) => void;
   onDelete: (item: TrackItem) => void;
+  onOpenDetail: (item: TrackItem) => void;
+}
+
+const MAX_RESOURCE_CHIPS = 3;
+
+/** Warna aksen tepi kiri card berdasarkan prioritas. */
+const PRIORITY_ACCENT: Record<Priority, string> = {
+  high: "bg-coral",
+  medium: "bg-sunny",
+  low: "bg-mint",
+};
+
+/** Fallback label saat resource tak diberi keterangan: pakai domain-nya. */
+function labelFromUrl(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }
 
 export default function ItemCard({
@@ -16,21 +35,33 @@ export default function ItemCard({
   onStatusChange,
   onEdit,
   onDelete,
+  onOpenDetail,
 }: ItemCardProps) {
-  const status = STATUS_META[item.status];
   const priority = PRIORITY_META[item.priority];
   const isDone = item.status === "done";
+  const resources = item.resources ?? [];
+  const shownResources = resources.slice(0, MAX_RESOURCE_CHIPS);
+  const extraResources = resources.length - shownResources.length;
 
   return (
-    <article className="group relative flex flex-col gap-3 rounded-2xl glass p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-fade-in">
+    <article className="group relative flex h-full flex-col gap-3 overflow-hidden rounded-2xl glass p-4 pl-5 transition-shadow duration-200 hover:shadow-lg">
+      {/* Aksen prioritas di tepi kiri */}
+      <span
+        className={`absolute inset-y-0 left-0 w-1.5 ${PRIORITY_ACCENT[item.priority]}`}
+        aria-hidden
+      />
+
       <div className="flex items-start justify-between gap-3">
-        <h3
-          className={`text-base font-bold leading-snug text-navy ${
+        <button
+          type="button"
+          onClick={() => onOpenDetail(item)}
+          title="Lihat detail"
+          className={`line-clamp-2 text-left text-[15px] font-bold leading-snug tracking-tight text-navy transition-colors hover:text-turquoise ${
             isDone ? "line-through opacity-60" : ""
           }`}
         >
           {item.title}
-        </h3>
+        </button>
         <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
           <button
             onClick={() => onEdit(item)}
@@ -66,52 +97,76 @@ export default function ItemCard({
       </div>
 
       {item.description && (
-        <p className="text-sm leading-relaxed text-muted">{item.description}</p>
+        <p className="line-clamp-2 text-sm leading-relaxed text-muted">
+          {item.description}
+        </p>
       )}
 
-      {item.resourceLink && (
-        <a
-          href={item.resourceLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-navy underline decoration-turquoise decoration-2 underline-offset-2 hover:text-turquoise"
-        >
-          🔗 Buka resource
-        </a>
+      {resources.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {shownResources.map((r, i) => (
+            <a
+              key={i}
+              href={r.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={r.url}
+              className="inline-flex max-w-48 items-center gap-1 rounded-full border border-turquoise/60 bg-turquoise/15 px-2.5 py-1 text-xs font-semibold text-navy transition-colors hover:bg-turquoise/30"
+            >
+              🔗 <span className="truncate">{r.label || labelFromUrl(r.url)}</span>
+            </a>
+          ))}
+          {extraResources > 0 && (
+            <button
+              type="button"
+              onClick={() => onOpenDetail(item)}
+              className="rounded-full border border-white/60 bg-white/50 px-2.5 py-1 text-xs font-semibold text-muted transition-colors hover:text-navy"
+            >
+              +{extraResources} lainnya
+            </button>
+          )}
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Badge className="bg-cyan-bg text-navy border border-border">
-          {item.category}
+        <Badge className="border border-white/60 bg-white/50 text-navy">
+          <span className="inline-block max-w-36 truncate align-bottom">
+            {item.category}
+          </span>
         </Badge>
         <Badge className={priority.className}>
           {priority.emoji} {priority.label}
         </Badge>
-        <Badge className={status.className}>
-          {status.emoji} {status.label}
-        </Badge>
       </div>
 
-      {/* Quick action: pindah status */}
-      <div className="flex flex-wrap gap-1.5 border-t border-border pt-3">
-        {STATUS_ORDER.map((s) => {
-          const active = s === item.status;
-          const meta = STATUS_META[s];
-          return (
-            <button
-              key={s}
-              onClick={() => onStatusChange(item.id, s)}
-              disabled={active}
-              className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-all ${
-                active
-                  ? `${meta.className} cursor-default`
-                  : "bg-cyan-bg/60 text-muted hover:bg-cyan-bg hover:text-navy"
-              }`}
-            >
-              {meta.emoji} {meta.label}
-            </button>
-          );
-        })}
+      {/* Segmented control: pindah status */}
+      <div className="mt-auto flex items-center gap-2 border-t border-white/40 pt-3">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+          Status
+        </span>
+        <div className="ml-auto inline-flex rounded-full bg-cyan-bg/50 p-0.5">
+          {STATUS_ORDER.map((s) => {
+            const active = s === item.status;
+            const meta = STATUS_META[s];
+            return (
+              <button
+                key={s}
+                onClick={() => onStatusChange(item.id, s)}
+                disabled={active}
+                title={meta.label}
+                aria-label={`Tandai ${meta.label}`}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-all ${
+                  active
+                    ? "cursor-default bg-white text-navy shadow-sm"
+                    : "text-muted hover:text-navy"
+                }`}
+              >
+                <span>{meta.emoji}</span>
+                {active && <span className="ml-1">{meta.label}</span>}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </article>
   );

@@ -40,6 +40,20 @@
   --radius-2xl: 1.25rem;
 }
 
+/* Semua elemen clickable pakai cursor pointer (kecuali yang disabled) */
+button:not(:disabled),
+[role="button"]:not(:disabled),
+[role="option"],
+[role="combobox"]:not(:disabled),
+summary,
+label[for] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
 body {
   /* Background berwarna & lembut supaya efek glass/blur kelihatan */
   background:
@@ -133,4 +147,13 @@ body {
 
 .animate-fade-in {
   animation: fade-in 0.3s ease-out both;
+}
+
+/* Sembunyikan scrollbar tapi tetap bisa di-scroll (biar form lebih clean) */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge lawas */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }

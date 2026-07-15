@@ -37,7 +37,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
         className="absolute inset-0 bg-navy/40 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
-      <div className="glass relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-2xl animate-fade-in">
+      <div className="glass no-scrollbar relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-2xl animate-fade-in">
         <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-white/40 bg-white/50 px-6 py-4 backdrop-blur-md">
           <h2 className="text-lg font-bold text-navy">{title}</h2>
           <button

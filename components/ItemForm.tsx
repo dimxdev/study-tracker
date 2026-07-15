@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { Priority, Status, TrackItem } from "@/types";
+import type { Priority, Resource, Status, TrackItem } from "@/types";
 import type { NewItemInput } from "@/hooks/useTracker";
 import { PRIORITY_META, STATUS_META, STATUS_ORDER } from "@/lib/constants";
+import { sentenceCase, titleCase } from "@/lib/format";
 import Button from "./Button";
 import Select, { type SelectOption } from "./Select";
 
@@ -28,7 +29,11 @@ export default function ItemForm({
 }: ItemFormProps) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
-  const [resourceLink, setResourceLink] = useState(initial?.resourceLink ?? "");
+  const [resources, setResources] = useState<Resource[]>(
+    initial?.resources && initial.resources.length > 0
+      ? initial.resources.map((r) => ({ url: r.url, label: r.label ?? "" }))
+      : []
+  );
   const [category, setCategory] = useState(initial?.category ?? categories[0] ?? "");
   const [newCategory, setNewCategory] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
@@ -65,6 +70,20 @@ export default function ItemForm({
     }
   }
 
+  function addResource() {
+    setResources((prev) => [...prev, { url: "", label: "" }]);
+  }
+
+  function updateResource(index: number, patch: Partial<Resource>) {
+    setResources((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, ...patch } : r))
+    );
+  }
+
+  function removeResource(index: number) {
+    setResources((prev) => prev.filter((_, i) => i !== index));
+  }
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const cleanTitle = title.trim();
@@ -72,16 +91,26 @@ export default function ItemForm({
       setError("Judul wajib diisi ya 🙂");
       return;
     }
-    const finalCategory = (addingCategory ? newCategory : category).trim();
+    // Kategori baru diformat Title Case; kategori existing dipakai apa adanya
+    // supaya nggak bikin duplikat dengan beda kapitalisasi.
+    const finalCategory = addingCategory
+      ? titleCase(newCategory)
+      : category.trim();
     if (!finalCategory) {
       setError("Pilih atau isi kategori dulu.");
       return;
     }
 
+    // Buang baris resource yang URL-nya kosong, trim & format label
+    const cleanResources: Resource[] = resources
+      .map((r) => ({ url: r.url.trim(), label: titleCase(r.label ?? "") }))
+      .filter((r) => r.url !== "")
+      .map((r) => ({ url: r.url, label: r.label || undefined }));
+
     onSubmit({
-      title: cleanTitle,
-      description: description.trim() || undefined,
-      resourceLink: resourceLink.trim() || undefined,
+      title: titleCase(cleanTitle),
+      description: sentenceCase(description) || undefined,
+      resources: cleanResources.length > 0 ? cleanResources : undefined,
       category: finalCategory,
       priority,
       status,
@@ -122,17 +151,62 @@ export default function ItemForm({
       </div>
 
       <div>
-        <label htmlFor="link" className={labelClass}>
-          Link Resource
-        </label>
-        <input
-          id="link"
-          type="url"
-          value={resourceLink}
-          onChange={(e) => setResourceLink(e.target.value)}
-          placeholder="https://... (dokumentasi, video, repo)"
-          className={inputClass}
-        />
+        <label className={labelClass}>Link Resource</label>
+        {resources.length === 0 ? (
+          <p className="mb-2 text-xs text-muted">
+            Belum ada resource. Tambahkan link dokumentasi, video, atau repo.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {resources.map((r, i) => (
+              <div
+                key={i}
+                className="flex flex-col gap-2 rounded-xl border border-white/50 bg-white/25 p-2.5"
+              >
+                <div className="flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={r.url}
+                    onChange={(e) => updateResource(i, { url: e.target.value })}
+                    placeholder="https://…"
+                    className={inputClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeResource(i)}
+                    aria-label="Hapus resource"
+                    className="shrink-0 rounded-full p-2 text-muted transition-colors hover:bg-coral/20 hover:text-navy"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M6 7h12M9 7V5h6v2m-8 0l1 12h8l1-12"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <input
+                  value={r.label ?? ""}
+                  onChange={(e) => updateResource(i, { label: e.target.value })}
+                  placeholder="Keterangan (mis. Dokumentasi resmi, Video tutorial)"
+                  className={inputClass}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={addResource}
+          className="mt-2"
+        >
+          ➕ Tambah resource
+        </Button>
       </div>
 
       <div>
